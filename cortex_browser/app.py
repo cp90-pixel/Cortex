@@ -10,6 +10,7 @@ from PySide6.QtCore import QUrl, Qt, Slot
 from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QFileDialog,
     QLineEdit,
     QMainWindow,
@@ -17,6 +18,7 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QToolBar,
 )
+from PySide6.QtWebEngineCore import QWebEnginePage
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
 
@@ -40,6 +42,7 @@ class BrowserWindow(QMainWindow):
         super().__init__()
         self._home_url = home_url or QUrl.fromLocalFile(str(DEFAULT_HOME_PAGE))
         self._history: list[NavigationEntry] = []
+        self._permission_store: dict[tuple[str, int], QWebEnginePage.PermissionPolicy] = {}
 
         self.setWindowTitle(APP_NAME)
         self.resize(1200, 800)
@@ -50,6 +53,9 @@ class BrowserWindow(QMainWindow):
         self.web_view.urlChanged.connect(self._update_url_bar)
         self.web_view.loadProgress.connect(self._update_load_progress)
         self.web_view.loadFinished.connect(self._handle_load_finished)
+        self.web_view.page().featurePermissionRequested.connect(
+            self._handle_feature_permission_request
+        )
         self.setCentralWidget(self.web_view)
 
         self.navigation_bar = self._create_navigation_bar()
@@ -200,6 +206,77 @@ class BrowserWindow(QMainWindow):
     def _focus_address_bar(self) -> None:
         self.url_bar.setFocus()
         self.url_bar.selectAll()
+
+    @Slot(QUrl, QWebEnginePage.Feature)
+    def _handle_feature_permission_request(
+        self, security_origin: QUrl, feature: QWebEnginePage.Feature
+    ) -> None:
+        if feature != QWebEnginePage.Feature.Geolocation:
+            self.web_view.page().setFeaturePermission(
+                security_origin, feature, QWebEnginePage.PermissionPolicy.PermissionDeniedByUser
+            )
+            return
+
+        if not self._is_secure_geolocation_origin(security_origin):
+            self.status_bar.showMessage(
+                "Blocked location request: insecure context", 5000
+            )
+            self.web_view.page().setFeaturePermission(
+                security_origin, feature, QWebEnginePage.PermissionPolicy.PermissionDeniedByUser
+            )
+            return
+
+        key = (security_origin.toString(), int(feature))
+        if key in self._permission_store:
+            self.web_view.page().setFeaturePermission(
+                security_origin, feature, self._permission_store[key]
+            )
+            return
+
+        allow, remember = self._prompt_geolocation_permission(security_origin)
+        policy = (
+            QWebEnginePage.PermissionPolicy.PermissionGrantedByUser
+            if allow
+            else QWebEnginePage.PermissionPolicy.PermissionDeniedByUser
+        )
+        if remember:
+            self._permission_store[key] = policy
+
+        self.web_view.page().setFeaturePermission(security_origin, feature, policy)
+
+    def _prompt_geolocation_permission(self, security_origin: QUrl) -> tuple[bool, bool]:
+        origin_display = security_origin.toDisplayString()
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("Location Access Requested")
+        dialog.setIcon(QMessageBox.Question)
+        dialog.setText(f"{origin_display} wants to know your location.")
+        dialog.setInformativeText(
+            "Sharing your location provides this site with your approximate position."
+        )
+        allow_button = dialog.addButton("Allow", QMessageBox.AcceptRole)
+        deny_button = dialog.addButton("Deny", QMessageBox.RejectRole)
+        remember_choice = QCheckBox("Remember this decision")
+        dialog.setCheckBox(remember_choice)
+        dialog.exec()
+
+        allow = dialog.clickedButton() == allow_button
+        remember = remember_choice.isChecked()
+
+        # If the user closes the dialog without choosing, treat it as a denial.
+        if dialog.clickedButton() not in (allow_button, deny_button):
+            allow = False
+
+        return allow, remember
+
+    @staticmethod
+    def _is_secure_geolocation_origin(url: QUrl) -> bool:
+        if url.scheme() in {"https", "wss", "file"}:
+            return True
+
+        if url.scheme() == "http" and url.host() in {"localhost", "127.0.0.1", "::1"}:
+            return True
+
+        return False
 
     def show_about_dialog(self) -> None:
         QMessageBox.about(
