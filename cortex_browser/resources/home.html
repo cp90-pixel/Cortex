@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Welcome to Cortex Browser</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: "Segoe UI", Roboto, sans-serif;
+        background: radial-gradient(circle at top, #2323a7, #080826);
+        color: #f8f9fd;
+        min-height: 100%;
+      }
+      body {
+        margin: 0;
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        background: transparent;
+      }
+      main {
+        max-width: 720px;
+        padding: 3rem;
+        text-align: center;
+        background: rgba(7, 12, 32, 0.8);
+        border-radius: 24px;
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(8px);
+      }
+      h1 {
+        font-size: clamp(2.5rem, 4vw, 3.5rem);
+        margin-bottom: 0.5rem;
+      }
+      p {
+        line-height: 1.6;
+        margin: 0 auto 1.25rem;
+        color: rgba(248, 249, 253, 0.9);
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 2rem 0 0;
+        display: grid;
+        gap: 0.75rem;
+      }
+      li {
+        background: rgba(255, 255, 255, 0.08);
+        padding: 1rem 1.5rem;
+        border-radius: 16px;
+        text-align: left;
+        line-height: 1.4;
+      }
+      a {
+        color: #80b3ff;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Cortex Browser</h1>
+      <p>
+        Welcome! Enter a URL or a search term in the navigation bar to start
+        exploring the web. Cortex Browser is a lightweight showcase project
+        built entirely from scratch with Qt and Python.
+      </p>
+      <ul>
+        <li><strong>Navigate:</strong> Use the toolbar buttons or familiar keyboard shortcuts like <kbd>Ctrl</kbd>+<kbd>L</kbd> and <kbd>Enter</kbd>.</li>
+        <li><strong>Search:</strong> Type anything with spaces and Cortex will perform a DuckDuckGo search.</li>
+        <li><strong>Local files:</strong> Open HTML files on your computer with the “Open File” action.</li>
+        <li><strong>Reload:</strong> Refresh the current page with <kbd>F5</kbd> or the Reload button.</li>
+      </ul>
+    </main>
+  </body>
+</html>
