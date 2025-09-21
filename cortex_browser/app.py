@@ -21,6 +21,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtWebEngineCore import QWebEnginePage
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
+from .geolocation import is_secure_geolocation_origin
+
 
 APP_NAME = "Cortex Browser"
 DEFAULT_HOME_PAGE = Path(__file__).resolve().parent / "resources" / "home.html"
@@ -219,7 +221,7 @@ class BrowserWindow(QMainWindow):
 
         if not self._is_secure_geolocation_origin(security_origin):
             self.status_bar.showMessage(
-                "Blocked location request: insecure context", 5000
+                "Blocked location request: origin must use HTTPS or localhost", 5000
             )
             self.web_view.page().setFeaturePermission(
                 security_origin, feature, QWebEnginePage.PermissionPolicy.PermissionDeniedByUser
@@ -270,13 +272,9 @@ class BrowserWindow(QMainWindow):
 
     @staticmethod
     def _is_secure_geolocation_origin(url: QUrl) -> bool:
-        if url.scheme() in {"https", "wss", "file"}:
-            return True
+        """Determine if *url* is a potentially trustworthy origin for geolocation."""
 
-        if url.scheme() == "http" and url.host() in {"localhost", "127.0.0.1", "::1"}:
-            return True
-
-        return False
+        return is_secure_geolocation_origin(url)
 
     def show_about_dialog(self) -> None:
         QMessageBox.about(
